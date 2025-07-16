@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(222, 84%, 5%);
+  --muted: hsl(210, 40%, 98%);
+  --muted-foreground: hsl(215, 16%, 47%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222, 84%, 5%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222, 84%, 5%);
+  --border: hsl(214, 32%, 91%);
+  --input: hsl(214, 32%, 91%);
+  --primary: hsl(221, 83%, 53%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(210, 40%, 96%);
+  --secondary-foreground: hsl(222, 84%, 5%);
+  --accent: hsl(210, 40%, 96%);
+  --accent-foreground: hsl(222, 84%, 5%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(221, 83%, 53%);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Custom styles for blog content */
+  .prose {
+    @apply max-w-none;
+  }
+
+  .prose h1,
+  .prose h2,
+  .prose h3,
+  .prose h4,
+  .prose h5,
+  .prose h6 {
+    @apply text-slate-800 font-bold;
+  }
+
+  .prose h1 {
+    @apply text-3xl mb-6 mt-8;
+  }
+
+  .prose h2 {
+    @apply text-2xl mb-4 mt-8;
+  }
+
+  .prose h3 {
+    @apply text-xl mb-3 mt-6;
+  }
+
+  .prose p {
+    @apply text-slate-700 mb-4 leading-relaxed;
+  }
+
+  .prose a {
+    @apply text-blue-600 hover:text-blue-800 transition-colors;
+  }
+
+  .prose code {
+    @apply bg-slate-100 px-2 py-1 rounded text-sm text-slate-800;
+  }
+
+  .prose pre {
+    @apply bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto;
+  }
+
+  .prose pre code {
+    @apply bg-transparent text-slate-100 p-0;
+  }
+
+  .prose blockquote {
+    @apply border-l-4 border-slate-300 pl-4 italic text-slate-600;
+  }
+
+  .prose ul,
+  .prose ol {
+    @apply mb-4;
+  }
+
+  .prose li {
+    @apply mb-1;
+  }
+
+  .prose strong {
+    @apply font-semibold text-slate-800;
+  }
+
+  .prose em {
+    @apply italic;
+  }
+}
