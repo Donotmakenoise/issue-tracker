@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPostSchema, updatePostSchema } from "@shared/schema";
+import { insertPostSchema, updatePostSchema, insertContactSchema } from "@shared/schema";
 import { z } from "zod";
 
 const adminPasswordSchema = z.object({
@@ -161,12 +161,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Contact form submission
   app.post("/api/contact", async (req, res) => {
     try {
-      const { name, email, subject, message } = req.body;
+      const contactData = insertContactSchema.parse(req.body);
       
-      // In a real application, you would send email or save to database
-      console.log("Contact form submission:", { name, email, subject, message });
+      const contact = await storage.createContact(contactData);
       
       res.json({ success: true, message: "Message sent successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid contact data", details: error.errors });
+      } else {
+        console.error("Contact form error:", error);
+        res.status(500).json({ error: "Failed to send message" });
+      }
+    }
+  });
+
+  // Get all contacts (admin only)
+  app.get("/api/admin/contacts", async (req, res) => {
+    try {
+      const contacts = await storage.getAllContacts();
+      res.json(contacts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch contacts" });
+    }
+  });
+
+  // Get unread contacts (admin only)
+  app.get("/api/admin/contacts/unread", async (req, res) => {
+    try {
+      const contacts = await storage.getUnreadContacts();
+      res.json(contacts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch unread contacts" });
+    }
+  });
+
+  // Mark contact as read (admin only)
+  app.patch("/api/admin/contacts/:id/read", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.markContactAsRead(parseInt(id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark contact as read" });
+    }
+  });
+
+  // Delete contact (admin only)
+  app.delete("/api/admin/contacts/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteContact(parseInt(id));
+      
+      if (!success) {
+        return res.status(404).json({ error: "Contact not found" });
+      }
+      
+      res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to send message" });
     }

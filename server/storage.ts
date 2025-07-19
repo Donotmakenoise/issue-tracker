@@ -31,15 +31,19 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private posts: Map<number, Post>;
+  private contacts: Map<number, Contact>;
   private currentUserId: number;
   private currentPostId: number;
+  private currentContactId: number;
   private postsDir: string;
 
   constructor() {
     this.users = new Map();
     this.posts = new Map();
+    this.contacts = new Map();
     this.currentUserId = 1;
     this.currentPostId = 1;
+    this.currentContactId = 1;
     this.postsDir = path.join(process.cwd(), "posts");
     this.initializeStorage();
   }
@@ -317,6 +321,45 @@ ${post.content}`;
       tagDistribution,
     };
   }
+
+  async createContact(insertContact: InsertContact): Promise<Contact> {
+    const id = this.currentContactId++;
+    const contact: Contact = {
+      ...insertContact,
+      id,
+      status: "unread",
+      createdAt: new Date(),
+    };
+    
+    this.contacts.set(id, contact);
+    return contact;
+  }
+
+  async getAllContacts(): Promise<Contact[]> {
+    return Array.from(this.contacts.values())
+      .sort((a, b) => 
+        new Date(b.createdAt || new Date()).getTime() - new Date(a.createdAt || new Date()).getTime()
+      );
+  }
+
+  async getUnreadContacts(): Promise<Contact[]> {
+    return Array.from(this.contacts.values())
+      .filter(contact => contact.status === "unread")
+      .sort((a, b) => 
+        new Date(b.createdAt || new Date()).getTime() - new Date(a.createdAt || new Date()).getTime()
+      );
+  }
+
+  async markContactAsRead(id: number): Promise<void> {
+    const contact = this.contacts.get(id);
+    if (contact) {
+      contact.status = "read";
+    }
+  }
+
+  async deleteContact(id: number): Promise<boolean> {
+    return this.contacts.delete(id);
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -546,6 +589,30 @@ ${post.content}`;
       topPosts,
       tagDistribution
     };
+  }
+
+  async createContact(insertContact: InsertContact): Promise<Contact> {
+    const [contact] = await db.insert(contacts).values(insertContact).returning();
+    return contact;
+  }
+
+  async getAllContacts(): Promise<Contact[]> {
+    return await db.select().from(contacts).orderBy(desc(contacts.createdAt));
+  }
+
+  async getUnreadContacts(): Promise<Contact[]> {
+    return await db.select().from(contacts)
+      .where(eq(contacts.status, "unread"))
+      .orderBy(desc(contacts.createdAt));
+  }
+
+  async markContactAsRead(id: number): Promise<void> {
+    await db.update(contacts).set({ status: "read" }).where(eq(contacts.id, id));
+  }
+
+  async deleteContact(id: number): Promise<boolean> {
+    const result = await db.delete(contacts).where(eq(contacts.id, id));
+    return result.rowCount > 0;
   }
 }
 

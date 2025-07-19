@@ -4,12 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Trash2, Edit, BarChart3, Users, FileText, TrendingUp, Eye } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Trash2, Edit, BarChart3, Users, FileText, TrendingUp, Eye, Mail, MessageSquare, Clock, CheckCircle, Bell } from "lucide-react";
 import PostModal from "@/components/post-modal";
-import type { Post } from "@shared/schema";
+import type { Post, Contact } from "@shared/schema";
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -26,6 +28,17 @@ export default function Admin() {
   const { data: stats } = useQuery({
     queryKey: ["/api/admin/stats"],
     enabled: isAuthenticated,
+  });
+
+  const { data: contacts } = useQuery<Contact[]>({
+    queryKey: ["/api/admin/contacts"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: unreadContacts } = useQuery<Contact[]>({
+    queryKey: ["/api/admin/contacts/unread"],
+    enabled: isAuthenticated,
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 
   const loginMutation = useMutation({
@@ -67,6 +80,39 @@ export default function Admin() {
       toast({
         title: "Error deleting post",
         description: "Failed to delete post. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("PATCH", `/api/admin/contacts/${id}/read`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/contacts/unread"] });
+    },
+  });
+
+  const deleteContactMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiRequest("DELETE", `/api/admin/contacts/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Contact deleted",
+        description: "The contact message has been deleted successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/contacts/unread"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error deleting contact",
+        description: "Failed to delete contact. Please try again.",
         variant: "destructive",
       });
     },
@@ -116,6 +162,16 @@ export default function Admin() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
+      {/* Notification Box */}
+      {unreadContacts && unreadContacts.length > 0 && (
+        <Alert className="border-orange-200 bg-orange-50">
+          <Bell className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800">
+            You have {unreadContacts.length} unread contact message{unreadContacts.length !== 1 ? 's' : ''}.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Dashboard Stats */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -215,73 +271,178 @@ export default function Admin() {
         </div>
       )}
 
-      {/* Create Post Action */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Post Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center">
-            <PostModal 
-              onSuccess={() => {
-                queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="posts" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="posts" className="flex items-center gap-2">
+            <FileText size={16} />
+            Posts Management
+          </TabsTrigger>
+          <TabsTrigger value="contacts" className="flex items-center gap-2">
+            <Mail size={16} />
+            Contact Messages
+            {unreadContacts && unreadContacts.length > 0 && (
+              <Badge variant="destructive" className="ml-1 text-xs">
+                {unreadContacts.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Existing Posts */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Existing Posts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-12 bg-slate-200 rounded"></div>
+        <TabsContent value="posts" className="space-y-6">
+          {/* Create Post Action */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Post Management</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-center">
+                <PostModal 
+                  onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Existing Posts */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Existing Posts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-12 bg-slate-200 rounded"></div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {posts?.map((post) => (
-                <div key={post.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-md">
-                  <div>
-                    <p className="font-medium text-slate-800">{post.title}</p>
-                    <p className="text-slate-500 text-sm">{post.slug}.md</p>
-                  </div>
-                  <div className="space-x-2">
-                    <PostModal 
-                      post={post} 
-                      trigger={
-                        <Button variant="outline" size="sm">
-                          <Edit size={16} className="mr-1" />
-                          Edit
+              ) : (
+                <div className="space-y-3">
+                  {posts?.map((post) => (
+                    <div key={post.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-md">
+                      <div>
+                        <p className="font-medium text-slate-800">{post.title}</p>
+                        <p className="text-slate-500 text-sm">{post.slug}.md</p>
+                      </div>
+                      <div className="space-x-2">
+                        <PostModal 
+                          post={post} 
+                          trigger={
+                            <Button variant="outline" size="sm">
+                              <Edit size={16} className="mr-1" />
+                              Edit
+                            </Button>
+                          }
+                          onSuccess={() => {
+                            queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
+                          }}
+                        />
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deletePostMutation.mutate(post.id)}
+                          disabled={deletePostMutation.isPending}
+                        >
+                          <Trash2 size={16} className="mr-1" />
+                          Delete
                         </Button>
-                      }
-                      onSuccess={() => {
-                        queryClient.invalidateQueries({ queryKey: ["/api/posts"] });
-                      }}
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => deletePostMutation.mutate(post.id)}
-                      disabled={deletePostMutation.isPending}
-                    >
-                      <Trash2 size={16} className="mr-1" />
-                      Delete
-                    </Button>
-                  </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="contacts" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <MessageSquare size={24} />
+                Contact Messages
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {contacts && contacts.length > 0 ? (
+                <div className="space-y-4">
+                  {contacts.map((contact) => (
+                    <div 
+                      key={contact.id} 
+                      className={`p-4 border rounded-lg ${
+                        contact.status === 'unread' 
+                          ? 'border-orange-200 bg-orange-50' 
+                          : 'border-slate-200 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-slate-800">{contact.subject}</h3>
+                            {contact.status === 'unread' && (
+                              <Badge variant="destructive" className="text-xs">
+                                New
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-600">
+                            From: <span className="font-medium">{contact.name}</span> ({contact.email})
+                          </p>
+                          <div className="flex items-center gap-1 text-xs text-slate-500 mt-1">
+                            <Clock size={12} />
+                            {new Date(contact.createdAt || new Date()).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          {contact.status === 'unread' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => markAsReadMutation.mutate(contact.id)}
+                              disabled={markAsReadMutation.isPending}
+                            >
+                              <CheckCircle size={14} className="mr-1" />
+                              Mark Read
+                            </Button>
+                          )}
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteContactMutation.mutate(contact.id)}
+                            disabled={deleteContactMutation.isPending}
+                          >
+                            <Trash2 size={14} className="mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded border-l-4 border-l-slate-300">
+                        <p className="text-slate-700 whitespace-pre-wrap">{contact.message}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <MessageSquare className="mx-auto h-12 w-12 text-slate-400 mb-4" />
+                  <h3 className="text-lg font-medium text-slate-800 mb-2">No contact messages</h3>
+                  <p className="text-slate-600">Contact messages will appear here when users submit the contact form.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
