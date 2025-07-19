@@ -345,30 +345,23 @@ export class DatabaseStorage implements IStorage {
         const content = await fs.readFile(filePath, 'utf-8');
         const slug = file.replace('.md', '');
         
-        try {
-          // Check if post already exists in database
-          const existingPost = await db.select().from(posts).where(eq(posts.slug, slug)).limit(1);
+        // Check if post already exists in database
+        const existingPost = await db.select().from(posts).where(eq(posts.slug, slug)).limit(1);
+        
+        if (existingPost.length === 0) {
+          const parsed = this.parseMarkdownFile(content);
+          const post: InsertPost = {
+            title: parsed.title,
+            slug: slug,
+            content: parsed.markdown,
+            excerpt: parsed.excerpt,
+            readTime: parsed.readTime,
+            category: parsed.category,
+            tags: parsed.tags,
+            status: parsed.status as 'published' | 'draft',
+          };
           
-          if (existingPost.length === 0) {
-            const parsed = this.parseMarkdownFile(content);
-            const post: InsertPost = {
-              title: parsed.title,
-              slug: slug,
-              content: parsed.markdown,
-              excerpt: parsed.excerpt,
-              readTime: parsed.readTime,
-              category: parsed.category,
-              tags: parsed.tags,
-              status: parsed.status as 'published' | 'draft',
-              viewCount: 0,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            };
-            
-            await db.insert(posts).values(post);
-          }
-        } catch (dbError) {
-          console.warn(`Skipping database operation for ${slug} due to connection error:`, dbError);
+          await db.insert(posts).values(post);
         }
       }
     } catch (error) {
@@ -441,43 +434,36 @@ ${post.content}`;
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    if (!db) return undefined;
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    if (!db) return undefined;
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    if (!db) throw new Error("Database not available");
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async getAllPosts(): Promise<Post[]> {
-    if (!db) return [];
     return await db.select().from(posts).orderBy(desc(posts.createdAt));
   }
 
   async getPostBySlug(slug: string): Promise<Post | undefined> {
-    if (!db) return undefined;
     const [post] = await db.select().from(posts).where(eq(posts.slug, slug));
     return post || undefined;
   }
 
   async createPost(insertPost: InsertPost): Promise<Post> {
-    if (!db) throw new Error("Database not available");
     const [post] = await db.insert(posts).values(insertPost).returning();
     await this.savePostToFile(post);
     return post;
   }
 
   async updatePost(id: number, updateData: Partial<InsertPost>): Promise<Post | undefined> {
-    if (!db) return undefined;
     const [post] = await db.update(posts).set(updateData).where(eq(posts.id, id)).returning();
     if (post) {
       await this.savePostToFile(post);
@@ -486,7 +472,6 @@ ${post.content}`;
   }
 
   async deletePost(id: number): Promise<boolean> {
-    if (!db) return false;
     const post = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
     if (post.length > 0) {
       await this.deletePostFile(post[0].slug);
@@ -497,14 +482,12 @@ ${post.content}`;
   }
 
   async incrementViewCount(slug: string): Promise<void> {
-    if (!db) return;
     await db.update(posts).set({
       viewCount: sql`${posts.viewCount} + 1`
     }).where(eq(posts.slug, slug));
   }
 
   async getPostsByTag(tag: string): Promise<Post[]> {
-    if (!db) return [];
     return await db.select().from(posts).where(
       and(
         sql`${posts.tags} @> ARRAY[${tag}]::text[]`,
@@ -514,7 +497,6 @@ ${post.content}`;
   }
 
   async searchPosts(query: string): Promise<Post[]> {
-    if (!db) return [];
     return await db.select().from(posts).where(
       and(
         sql`(${posts.title} ILIKE ${'%' + query + '%'} OR ${posts.content} ILIKE ${'%' + query + '%'})`,
@@ -532,18 +514,6 @@ ${post.content}`;
     topPosts: Post[];
     tagDistribution: { [key: string]: number };
   }> {
-    if (!db) {
-      return {
-        totalPosts: 0,
-        publishedPosts: 0,
-        draftPosts: 0,
-        thisMonthPosts: 0,
-        totalViews: 0,
-        topPosts: [],
-        tagDistribution: {}
-      };
-    }
-    
     const allPosts = await db.select().from(posts);
     const publishedPosts = allPosts.filter(p => p.status === 'published');
     const draftPosts = allPosts.filter(p => p.status === 'draft');
