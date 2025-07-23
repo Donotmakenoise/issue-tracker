@@ -365,6 +365,11 @@ export default function Admin() {
               <CardTitle className="text-2xl flex items-center gap-2">
                 <MessageSquare size={24} />
                 Contact Messages
+                {unreadContacts && unreadContacts.length > 0 && (
+                  <Badge variant="destructive" className="ml-2">
+                    {unreadContacts.length} new
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -375,56 +380,105 @@ export default function Admin() {
                       key={contact.id} 
                       className={`p-4 border rounded-lg ${
                         contact.status === 'unread' 
-                          ? 'border-orange-200 bg-orange-50' 
-                          : 'border-slate-200 bg-white'
+                          ? 'border-orange-200 bg-orange-50 shadow-md' 
+                          : 'border-slate-200 bg-white hover:shadow-sm'
                       }`}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-slate-800">{contact.subject}</h3>
+                            <h3 className="font-semibold text-slate-800 text-lg">{contact.subject}</h3>
                             {contact.status === 'unread' && (
-                              <Badge variant="destructive" className="text-xs">
-                                New
+                              <Badge variant="destructive" className="text-xs animate-pulse">
+                                NEW
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-slate-600">
-                            From: <span className="font-medium">{contact.name}</span> ({contact.email})
-                          </p>
-                          <div className="flex items-center gap-1 text-xs text-slate-500 mt-1">
+                          <div className="flex items-center gap-4 text-sm text-slate-600 mb-2">
+                            <span>
+                              <strong>From:</strong> {contact.name}
+                            </span>
+                            <span>
+                              <strong>Email:</strong> 
+                              <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline ml-1">
+                                {contact.email}
+                              </a>
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-slate-500">
                             <Clock size={12} />
-                            {new Date(contact.createdAt || new Date()).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            <span>
+                              {new Date(contact.createdAt || new Date()).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 ml-4">
                           {contact.status === 'unread' && (
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => markAsReadMutation.mutate(contact.id)}
                               disabled={markAsReadMutation.isPending}
+                              className="text-green-600 border-green-200 hover:bg-green-50"
                             >
                               <CheckCircle size={14} className="mr-1" />
                               Mark Read
                             </Button>
                           )}
                           <Button
-                            variant="destructive"
+                            variant="outline"
                             size="sm"
                             onClick={() => deleteContactMutation.mutate(contact.id)}
                             disabled={deleteContactMutation.isPending}
+                            className="text-red-600 border-red-200 hover:bg-red-50"
                           >
                             <Trash2 size={14} className="mr-1" />
                             Delete
                           </Button>
                         </div>
+                      </div>
+                      
+                      <div className="bg-slate-50 p-4 rounded-lg border-l-4 border-l-blue-300">
+                        <h4 className="font-medium text-slate-700 mb-2">Message:</h4>
+                        <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
+                          {contact.message}
+                          </p>
+                      </div>
+                      
+                      {contact.status === 'read' && (
+                        <div className="mt-3 text-xs text-green-600 flex items-center">
+                          <CheckCircle size={12} className="mr-1" />
+                          Message has been read
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="bg-slate-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-slate-800 mb-2">No contact messages yet</h3>
+                  <p className="text-slate-600 max-w-sm mx-auto">
+                    Contact messages from your website visitors will appear here. 
+                    You'll be notified when new messages arrive.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
                       </div>
                       <div className="bg-slate-50 p-3 rounded border-l-4 border-l-slate-300">
                         <p className="text-slate-700 whitespace-pre-wrap">{contact.message}</p>

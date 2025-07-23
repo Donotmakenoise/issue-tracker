@@ -161,18 +161,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Contact form submission
   app.post("/api/contact", async (req, res) => {
     try {
-      const contactData = insertContactSchema.parse(req.body);
+      const { name, email, subject, message } = req.body;
+      
+      // Validate required fields
+      if (!name || !email || !subject || !message) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Invalid email format" });
+      }
+      
+      const contactData = {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        subject: subject.trim(),
+        message: message.trim(),
+      };
       
       const contact = await storage.createContact(contactData);
       
-      res.json({ success: true, message: "Message sent successfully" });
+      res.json({ 
+        success: true, 
+        message: "Message sent successfully",
+        id: contact.id 
+      });
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid contact data", details: error.errors });
-      } else {
-        console.error("Contact form error:", error);
-        res.status(500).json({ error: "Failed to send message" });
-      }
+      console.error("Contact form error:", error);
+      res.status(500).json({ error: "Failed to send message. Please try again later." });
     }
   });
 
