@@ -1,4 +1,4 @@
-import { posts, users, type User, type InsertUser, type Post, type InsertPost } from "@shared/schema";
+import { posts, users, contacts, type User, type InsertUser, type Post, type InsertPost, type Contact, type InsertContact } from "@shared/schema";
 import fs from "fs/promises";
 import path from "path";
 import { db } from "./db";
