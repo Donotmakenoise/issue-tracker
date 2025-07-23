@@ -448,7 +448,7 @@ export default function Admin() {
                         <h4 className="font-medium text-slate-700 mb-2">Message:</h4>
                         <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
                           {contact.message}
-                          </p>
+                        </p>
                       </div>
                       
                       {contact.status === 'read' && (
@@ -470,27 +470,6 @@ export default function Admin() {
                     Contact messages from your website visitors will appear here. 
                     You'll be notified when new messages arrive.
                   </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded border-l-4 border-l-slate-300">
-                        <p className="text-slate-700 whitespace-pre-wrap">{contact.message}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <MessageSquare className="mx-auto h-12 w-12 text-slate-400 mb-4" />
-                  <h3 className="text-lg font-medium text-slate-800 mb-2">No contact messages</h3>
-                  <p className="text-slate-600">Contact messages will appear here when users submit the contact form.</p>
                 </div>
               )}
             </CardContent>
