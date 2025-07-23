@@ -1,4 +1,5 @@
-import { posts, users, contacts, type User, type InsertUser, type Post, type InsertPost, type Contact, type InsertContact } from "@shared/schema";
+import * as schema from "@shared/schema";
+import { type User, type InsertUser, type Post, type InsertPost, type Contact, type InsertContact } from "@shared/schema";
 import fs from "fs/promises";
 import path from "path";
 import { db } from "./db";
@@ -394,7 +395,7 @@ export class DatabaseStorage implements IStorage {
         
         try {
           // Check if post already exists in database
-          const existingPost = await db.select().from(posts).where(eq(posts.slug, slug)).limit(1);
+          const existingPost = await db.select().from(schema.posts).where(eq(schema.posts.slug, slug)).limit(1);
           
           if (existingPost.length === 0) {
             const parsed = this.parseMarkdownFile(content);
@@ -409,7 +410,7 @@ export class DatabaseStorage implements IStorage {
               status: parsed.status as 'published' | 'draft',
             };
             
-            await db.insert(posts).values(post);
+            await db.insert(schema.posts).values(post);
           }
         } catch (dbError) {
           console.error(`Error processing post ${slug}:`, dbError);
@@ -487,37 +488,37 @@ ${post.content}`;
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await db.select().from(schema.users).where(eq(schema.users.id, id));
     return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db.select().from(schema.users).where(eq(schema.users.username, username));
     return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const [user] = await db.insert(schema.users).values(insertUser).returning();
     return user;
   }
 
   async getAllPosts(): Promise<Post[]> {
-    return await db.select().from(posts).orderBy(desc(posts.createdAt));
+    return await db.select().from(schema.posts).orderBy(desc(schema.posts.createdAt));
   }
 
   async getPostBySlug(slug: string): Promise<Post | undefined> {
-    const [post] = await db.select().from(posts).where(eq(posts.slug, slug));
+    const [post] = await db.select().from(schema.posts).where(eq(schema.posts.slug, slug));
     return post || undefined;
   }
 
   async createPost(insertPost: InsertPost): Promise<Post> {
-    const [post] = await db.insert(posts).values(insertPost).returning();
+    const [post] = await db.insert(schema.posts).values(insertPost).returning();
     await this.savePostToFile(post);
     return post;
   }
 
   async updatePost(id: number, updateData: Partial<InsertPost>): Promise<Post | undefined> {
-    const [post] = await db.update(posts).set(updateData).where(eq(posts.id, id)).returning();
+    const [post] = await db.update(schema.posts).set(updateData).where(eq(schema.posts.id, id)).returning();
     if (post) {
       await this.savePostToFile(post);
     }
@@ -525,37 +526,37 @@ ${post.content}`;
   }
 
   async deletePost(id: number): Promise<boolean> {
-    const post = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
+    const post = await db.select().from(schema.posts).where(eq(schema.posts.id, id)).limit(1);
     if (post.length > 0) {
       await this.deletePostFile(post[0].slug);
-      await db.delete(posts).where(eq(posts.id, id));
+      await db.delete(schema.posts).where(eq(schema.posts.id, id));
       return true;
     }
     return false;
   }
 
   async incrementViewCount(slug: string): Promise<void> {
-    await db.update(posts).set({
-      viewCount: sql`${posts.viewCount} + 1`
-    }).where(eq(posts.slug, slug));
+    await db.update(schema.posts).set({
+      viewCount: sql`${schema.posts.viewCount} + 1`
+    }).where(eq(schema.posts.slug, slug));
   }
 
   async getPostsByTag(tag: string): Promise<Post[]> {
-    return await db.select().from(posts).where(
+    return await db.select().from(schema.posts).where(
       and(
-        sql`${posts.tags} @> ARRAY[${tag}]::text[]`,
-        eq(posts.status, 'published')
+        sql`${schema.posts.tags} @> ARRAY[${tag}]::text[]`,
+        eq(schema.posts.status, 'published')
       )
-    ).orderBy(desc(posts.createdAt));
+    ).orderBy(desc(schema.posts.createdAt));
   }
 
   async searchPosts(query: string): Promise<Post[]> {
-    return await db.select().from(posts).where(
+    return await db.select().from(schema.posts).where(
       and(
-        sql`(${posts.title} ILIKE ${'%' + query + '%'} OR ${posts.content} ILIKE ${'%' + query + '%'})`,
-        eq(posts.status, 'published')
+        sql`(${schema.posts.title} ILIKE ${'%' + query + '%'} OR ${schema.posts.content} ILIKE ${'%' + query + '%'})`,
+        eq(schema.posts.status, 'published')
       )
-    ).orderBy(desc(posts.createdAt));
+    ).orderBy(desc(schema.posts.createdAt));
   }
 
   async getPostStats(): Promise<{
@@ -567,7 +568,7 @@ ${post.content}`;
     topPosts: Post[];
     tagDistribution: { [key: string]: number };
   }> {
-    const allPosts = await db.select().from(posts);
+    const allPosts = await db.select().from(schema.posts);
     const publishedPosts = allPosts.filter(p => p.status === 'published');
     const draftPosts = allPosts.filter(p => p.status === 'draft');
     
@@ -602,26 +603,26 @@ ${post.content}`;
   }
 
   async createContact(insertContact: InsertContact): Promise<Contact> {
-    const [contact] = await db.insert(contacts).values(insertContact).returning();
+    const [contact] = await db.insert(schema.contacts).values(insertContact).returning();
     return contact;
   }
 
   async getAllContacts(): Promise<Contact[]> {
-    return await db.select().from(contacts).orderBy(desc(contacts.createdAt));
+    return await db.select().from(schema.contacts).orderBy(desc(schema.contacts.createdAt));
   }
 
   async getUnreadContacts(): Promise<Contact[]> {
-    return await db.select().from(contacts)
-      .where(eq(contacts.status, "unread"))
-      .orderBy(desc(contacts.createdAt));
+    return await db.select().from(schema.contacts)
+      .where(eq(schema.contacts.status, "unread"))
+      .orderBy(desc(schema.contacts.createdAt));
   }
 
   async markContactAsRead(id: number): Promise<void> {
-    await db.update(contacts).set({ status: "read" }).where(eq(contacts.id, id));
+    await db.update(schema.contacts).set({ status: "read" }).where(eq(schema.contacts.id, id));
   }
 
   async deleteContact(id: number): Promise<boolean> {
-    const result = await db.delete(contacts).where(eq(contacts.id, id));
+    const result = await db.delete(schema.contacts).where(eq(schema.contacts.id, id));
     return result.rowCount > 0;
   }
 }

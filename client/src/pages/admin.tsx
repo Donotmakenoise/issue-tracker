@@ -443,7 +443,6 @@ export default function Admin() {
                           </Button>
                         </div>
                       </div>
-                      
                       <div className="bg-slate-50 p-4 rounded-lg border-l-4 border-l-blue-300">
                         <h4 className="font-medium text-slate-700 mb-2">Message:</h4>
                         <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
