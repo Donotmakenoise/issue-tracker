@@ -367,7 +367,10 @@ export class DatabaseStorage implements IStorage {
 
   constructor() {
     this.postsDir = path.join(process.cwd(), "posts");
-    this.initializeStorage();
+    // Don't await this to prevent blocking the constructor
+    this.initializeStorage().catch(error => {
+      console.error("Failed to initialize storage:", error);
+    });
   }
 
   private async initializeStorage() {
@@ -375,6 +378,7 @@ export class DatabaseStorage implements IStorage {
       await this.loadPostsFromFiles();
     } catch (error) {
       console.error("Error initializing storage:", error);
+      // Application can continue without initial file loading
     }
   }
 
@@ -388,27 +392,33 @@ export class DatabaseStorage implements IStorage {
         const content = await fs.readFile(filePath, 'utf-8');
         const slug = file.replace('.md', '');
         
-        // Check if post already exists in database
-        const existingPost = await db.select().from(posts).where(eq(posts.slug, slug)).limit(1);
-        
-        if (existingPost.length === 0) {
-          const parsed = this.parseMarkdownFile(content);
-          const post: InsertPost = {
-            title: parsed.title,
-            slug: slug,
-            content: parsed.markdown,
-            excerpt: parsed.excerpt,
-            readTime: parsed.readTime,
-            category: parsed.category,
-            tags: parsed.tags,
-            status: parsed.status as 'published' | 'draft',
-          };
+        try {
+          // Check if post already exists in database
+          const existingPost = await db.select().from(posts).where(eq(posts.slug, slug)).limit(1);
           
-          await db.insert(posts).values(post);
+          if (existingPost.length === 0) {
+            const parsed = this.parseMarkdownFile(content);
+            const post: InsertPost = {
+              title: parsed.title,
+              slug: slug,
+              content: parsed.markdown,
+              excerpt: parsed.excerpt,
+              readTime: parsed.readTime,
+              category: parsed.category,
+              tags: parsed.tags,
+              status: parsed.status as 'published' | 'draft',
+            };
+            
+            await db.insert(posts).values(post);
+          }
+        } catch (dbError) {
+          console.error(`Error processing post ${slug}:`, dbError);
+          // Continue with other posts even if one fails
         }
       }
     } catch (error) {
       console.error("Error loading posts from files:", error);
+      // Don't throw the error, just log it so the application can continue
     }
   }
 
