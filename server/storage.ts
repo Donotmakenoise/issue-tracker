@@ -373,10 +373,16 @@ export class DatabaseStorage implements IStorage {
   static async build(): Promise<DatabaseStorage> {
     const storage = new DatabaseStorage();
     try {
+      // Test database connection first
+      const isConnected = await testConnection();
+      if (!isConnected) {
+        throw new Error("Failed to connect to database");
+      }
+      
       await storage.initializeStorage();
     } catch (error) {
       console.error("Failed to initialize storage:", error);
-      // Continue with storage instance even if initialization fails
+      throw error; // Re-throw to prevent server from starting with broken DB
     }
     return storage;
   }
