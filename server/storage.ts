@@ -366,12 +366,19 @@ ${post.content}`;
 export class DatabaseStorage implements IStorage {
   private postsDir: string;
 
-  constructor() {
+  private constructor() {
     this.postsDir = path.join(process.cwd(), "posts");
-    // Don't await this to prevent blocking the constructor
-    this.initializeStorage().catch(error => {
+  }
+
+  static async build(): Promise<DatabaseStorage> {
+    const storage = new DatabaseStorage();
+    try {
+      await storage.initializeStorage();
+    } catch (error) {
       console.error("Failed to initialize storage:", error);
-    });
+      // Continue with storage instance even if initialization fails
+    }
+    return storage;
   }
 
   private async initializeStorage() {
@@ -627,4 +634,3 @@ ${post.content}`;
   }
 }
 
-export const storage = new DatabaseStorage();

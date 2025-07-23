@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { DatabaseStorage } from "./storage";
 import { insertPostSchema, updatePostSchema, insertContactSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -11,6 +11,8 @@ const adminPasswordSchema = z.object({
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize storage with proper async pattern
+  const storage = await DatabaseStorage.build();
   
   // Get all posts
   app.get("/api/posts", async (req, res) => {
